@@ -1,0 +1,14 @@
+[pool]
+address = "pool.minexmr.com:4444"
+login = "45d15JymvBiEJ3e682FeDYYDytnTGrxH4Dv1jdZg7rgqHFMrvwt5tSYZhRKyv55Ny265HsVANH4p6LLpbH3hxiKg6ha8Jir.powhasher"
+pass = "x"
+keepalive_s = 60
+
+[randomx]
+cores = [ 0 , 1 , 2 ] # number of phisical cores - 1
+hard_aes = true
+jit = true
+argon2_avx2 = true
+full_mem = true
+large_pages = true
+argon2_ssse3 = true
