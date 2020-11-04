@@ -8,9 +8,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 use utils::client::Client;
 use utils::config::Config;
+use utils::worker::SubmitWorker;
 use utils::worker::Worker;
 
 use cn_stratum::client::PoolClient;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 
 use log::*;
 
@@ -90,6 +93,18 @@ fn main() {
     let core_ids = core_affinity::get_core_ids().unwrap();
     let worker_count = cfg.randomx.cores.len();
     let mut workerstats = Vec::with_capacity(cfg.randomx.cores.len());
+
+    let (tx, rx): (Sender<_>, Receiver<_>) = mpsc::channel();
+
+    let submit_worker = SubmitWorker {};
+
+    thread::Builder::new()
+        .name("sender".into())
+        .spawn(move || {
+            submit_worker.submit_share(rx, pool);
+        })
+        .unwrap();
+
     for (i, w) in cfg.randomx.cores.into_iter().enumerate() {
         let hash_count = Arc::new(AtomicUsize::new(0));
         workerstats.push(Arc::clone(&hash_count));
@@ -98,17 +113,18 @@ fn main() {
         let worker = Worker {
             hash_count,
             work: Arc::clone(&work),
-            pool: Arc::clone(&pool),
             core,
             worker_id: i as u32,
             step: worker_count as u32,
         };
 
+        let thread_tx = tx.clone();
+
         thread::Builder::new()
             .name(format!("worker{}", i))
             .spawn(move || {
                 core_affinity::set_for_current(core);
-                worker.run(rx_flags)
+                worker.run(rx_flags, thread_tx)
             })
             .unwrap();
     }

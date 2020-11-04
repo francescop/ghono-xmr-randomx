@@ -2,24 +2,27 @@ use crate::utils::pack_nonce;
 use crate::utils::unhexlify;
 use crate::utils::work::Work;
 use byteorder::{ByteOrder, LE};
-use cn_stratum::client::PoolClientWriter;
+use cn_stratum::client::{
+    ErrorReply, Job, JobAssignment, MessageHandler, PoolClient, PoolClientWriter, RequestId,
+};
 use core_affinity::CoreId;
 use hex::FromHex;
 use log::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
 pub struct Worker {
     pub hash_count: Arc<AtomicUsize>,
     pub work: Arc<Work>,
-    pub pool: Arc<Mutex<PoolClientWriter>>,
     pub core: CoreId,
     pub worker_id: u32,
     pub step: u32,
 }
 
 impl Worker {
-    pub fn run(self, rx_flags: randomx_rs::RandomXFlag) -> () {
+    pub fn run(self, rx_flags: randomx_rs::RandomXFlag, tx: Sender<Res>) -> () {
         debug!("init worker");
 
         let (_, job) = self.work.current();
@@ -67,13 +70,44 @@ impl Worker {
                 rx_hash = rx_vm.calculate_hash(&mut blob_hash).unwrap();
                 if LE::read_u64(&rx_hash[24..]) <= target {
                     debug!("submitting share {:?}", blob_hash);
+                    tx.send(Res {
+                        job: job.clone(),
+                        nonce: nonce,
+                        hash: rx_hash.clone(),
+                    });
+                    /*
                     self.pool
                         .lock()
                         .unwrap()
                         .submit(&job, nonce, &rx_hash)
                         .unwrap();
+                    */
                 }
                 self.hash_count.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    }
+}
+
+use crate::utils;
+pub struct Res {
+    pub job: cn_stratum::client::Job,
+    pub nonce: u32,
+    pub hash: [u8; 32],
+}
+
+pub struct SubmitWorker {}
+
+impl SubmitWorker {
+    pub fn submit_share(self, rx: Receiver<Res>, pool: Arc<Mutex<PoolClientWriter>>) {
+        loop {
+            let res = rx.recv();
+            match res {
+                Ok(r) => {
+                    debug!("ready to submit nonce: {}", r.nonce);
+                    pool.lock().unwrap().submit(&r.job, r.nonce, &r.hash);
+                }
+                Err(_) => error!("error submitting share"),
             }
         }
     }
