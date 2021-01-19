@@ -31,9 +31,12 @@ impl Worker {
         let seed_hash = <[u8; 32]>::from_hex(&job.seed_hash()).unwrap();
 
         let rx_cache = randomx_rs::RandomXCache::new(rx_flags, &seed_hash).unwrap();
+        debug!("[worker] cache created");
         let rx_dataset = randomx_rs::RandomXDataset::new(rx_flags, &rx_cache, 0).unwrap();
+        debug!("[worker] dataset created");
         let rx_vm =
             randomx_rs::RandomXVM::new(rx_flags, Some(&rx_cache), Some(&rx_dataset)).unwrap();
+        debug!("[worker] randomx vm created");
 
         loop {
             trace!("getting work");
