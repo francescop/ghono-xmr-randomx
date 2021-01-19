@@ -1,6 +1,5 @@
 mod utils;
 
-use std::fs::File;
 use std::io::BufRead;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -54,23 +53,23 @@ fn main() {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_HARD_AES;
     }
 
-    if cfg.randomx.hard_aes {
+    if cfg.randomx.jit {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_JIT;
     }
 
-    if cfg.randomx.hard_aes {
+    if cfg.randomx.argon2_avx2 {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_ARGON2_AVX2;
     }
 
-    if cfg.randomx.hard_aes {
+    if cfg.randomx.full_mem {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_FULL_MEM;
     }
 
-    if cfg.randomx.hard_aes {
+    if cfg.randomx.large_pages {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_LARGE_PAGES;
     }
 
-    if cfg.randomx.hard_aes {
+    if cfg.randomx.argon2_ssse3 {
         rx_flags = rx_flags | randomx_rs::RandomXFlag::FLAG_ARGON2_SSSE3;
     }
 
